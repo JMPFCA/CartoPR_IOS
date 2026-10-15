@@ -946,11 +946,16 @@ async function chargerListeRapports() {
             console.log("Dossier Carto_PR vide ou inexistant :", e);
         }
     } else {
-        for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            if (key && key.endsWith('.html')) {
-                listeFichiers.push(key);
-            }
+        // Mode PWA / Web : Récupération des clés depuis IndexedDB
+        try {
+            const keys = await idbGetAllKeys();
+            keys.forEach(key => {
+                if (key && key.endsWith('.html')) {
+                    listeFichiers.push(key);
+                }
+            });
+        } catch (e) {
+            console.error("Erreur de lecture IndexedDB :", e);
         }
     }
 
@@ -984,7 +989,7 @@ async function lireContenuRapport(nomFichier) {
             return null;
         }
     } else {
-        return localStorage.getItem(nomFichier);
+        return await idbGetItem(nomFichier);
     }
 }
 
@@ -1343,6 +1348,56 @@ locateControl.onAdd = function (map) {
 };
 
 locateControl.addTo(map);
+
+
+//Sauvegarde des rapports sous IOS
+
+function ouvrirBDD() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open("CartoPR_DB", 1);
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => resolve(request.result);
+        request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains("rapports")) {
+                db.createObjectStore("rapports"); // La clé sera le nom du fichier (.html)
+            }
+        };
+    });
+}
+
+async function idbSetItem(nomFichier, contenu) {
+    const db = await ouvrirBDD();
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction("rapports", "readwrite");
+        const store = transaction.objectStore("rapports");
+        const request = store.put(contenu, nomFichier);
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+    });
+}
+
+async function idbGetItem(nomFichier) {
+    const db = await ouvrirBDD();
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction("rapports", "readonly");
+        const store = transaction.objectStore("rapports");
+        const request = store.get(nomFichier);
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+    });
+}
+
+async function idbGetAllKeys() {
+    const db = await ouvrirBDD();
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction("rapports", "readonly");
+        const store = transaction.objectStore("rapports");
+        const request = store.getAllKeys();
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+    });
+}
 
 
 // --- BOUTON D'ENREGISTREMENT FICHIER TEXTE SOUS LA GÉOLOCALISATION ---
@@ -1725,8 +1780,8 @@ btnMic.onclick = async function(e) {
             }
             alert(`Rapport enregistré !`);
         } else {
-            // Mode Web / PWA (Safari / iPhone) : Stockage local + Téléchargement direct du fichier
-            localStorage.setItem(currentFileName, currentFileContent);
+            // Mode Web / PWA (Safari / iPhone) : Stockage dans IndexedDB + Téléchargement direct en secours
+            await idbSetItem(currentFileName, currentFileContent);
 
             const blob = new Blob([currentFileContent], { type: 'text/html;charset=utf-8' });
             const url = URL.createObjectURL(blob);
@@ -1741,7 +1796,7 @@ btnMic.onclick = async function(e) {
             if (typeof chargerListeRapports === 'function') {
                 await chargerListeRapports();
             }
-            alert("Rapport téléchargé et enregistré en mode Web !");
+            alert("Rapport enregistré !");
         }
     } catch (erreur) {
         console.error("Erreur d'enregistrement :", erreur);
