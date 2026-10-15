@@ -591,6 +591,13 @@
         }
     }
 
+    document.addEventListener("DOMContentLoaded", function() {
+        const btnQuitter = document.getElementById('btnQuitter');
+        if (btnQuitter && !btnQuitter.onclick) {
+            btnQuitter.onclick = quitterApp;
+        }
+    });
+
     function toggleSection(contentId, arrowId) {
         const content = document.getElementById(contentId);
         const arrow = document.getElementById(arrowId);
