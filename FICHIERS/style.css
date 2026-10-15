@@ -1,0 +1,197 @@
+body{
+    margin:0;
+    font-family:Arial, sans-serif;
+}
+
+/* ---------------- BARRE OUTILS ---------------- */
+
+#toolbar{
+    background:#f2f2f2;
+    padding:10px;
+    display:flex;
+    gap:20px;
+    align-items:center;
+}
+
+.block{
+    background:white;
+    padding:8px;
+    border-radius:5px;
+    box-shadow:0 0 3px rgba(0,0,0,0.2);
+}
+
+select{
+    min-width:120px;
+}
+
+/* ---------------- CARTE ---------------- */
+
+#map{
+    height:90vh;
+}
+
+/* ---------------- BORNE SIMPLE ---------------- */
+
+.borne{
+    width:20px;
+    height:24px;
+
+    background:white;
+    border:2px solid black;
+    border-radius:4px 4px 0 0;
+
+    position:relative;
+}
+
+.borne:after{
+    content:"";
+    position:absolute;
+
+    bottom:-10px;
+    left:7px;
+
+    width:2px;
+    height:10px;
+
+    background:black;
+}
+
+/* ---------------- BORNE PR ---------------- */
+
+.borne-pr{
+
+    width:34px;
+    height:42px;
+
+    background:white;
+
+    border:2px solid black;
+
+    border-radius:16px 16px 4px 4px;
+
+    position:relative;
+
+    overflow:hidden;
+
+    box-sizing:border-box;
+
+    box-shadow:0 1px 2px rgba(0,0,0,.4);
+}
+
+/* Petit piquet */
+
+.borne-pr:after{
+
+    content:"";
+
+    position:absolute;
+
+    bottom:-10px;
+
+    left:50%;
+
+    transform:translateX(-50%);
+
+    width:2px;
+
+    height:10px;
+
+    background:black;
+}
+
+/* Bandeau rouge */
+
+.borne-axe{
+
+    height:18px;
+
+    background:#c00000;
+
+    color:white;
+
+    font-size:10px;
+
+    font-weight:bold;
+
+    line-height:18px;
+
+    text-align:center;
+
+    white-space:nowrap;
+
+    overflow:hidden;
+}
+
+/* Numéro PR */
+
+.borne-num{
+
+    height:20px;
+
+    color:black;
+
+    font-size:11px;
+
+    font-weight:bold;
+
+    line-height:20px;
+
+    text-align:center;
+}
+
+#searchResults{
+
+    position:absolute;
+
+    background:white;
+
+    border:1px solid #ccc;
+
+    max-height:250px;
+
+    overflow-y:auto;
+
+    width:300px;
+
+    z-index:9999;
+
+    display:none;
+
+    box-shadow:0 2px 5px rgba(0,0,0,.3);
+}
+
+.search-item{
+
+    padding:6px;
+
+    cursor:pointer;
+
+    border-bottom:1px solid #eee;
+}
+
+.search-item:hover{
+
+    background:#f0f0f0;
+}
+
+/* Réduction de la largeur des menus déroulants (environ 2/3 en moins) */
+select {
+    max-width: 75px;
+    min-width: 60px;
+}
+
+/* Augmentation de la taille des icônes dans le bloc légende */
+.legende-item img {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+}
+
+/* Alignement propre pour chaque ligne de la légende */
+.legende-item {
+    display: flex;
+    align-items: center;
+	justify-content: flex-start; /* Force l'alignement à gauche de l'icône */
+    gap: 10px;
+    font-size: 12px;
+}

@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+
+<link rel="manifest" href="./manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="icon" type="image/png" href="FICHIERS/logo.png">
+    <meta charset="utf-8">
+    <title>Carto PR</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
+    <link rel="stylesheet" href="FICHIERS/style.css">
+	
+	<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+	
+	<script src="FICHIERS/ECHANGEURS/echangeurs.js"></script>
+	<script src="FICHIERS/AIRES/Aires_C.js"></script>
+    <script src="FICHIERS/AIRES/Aires_NC.js"></script>
+	<script src="FICHIERS/CARREFOURS/Carrefours.js"></script>
+	
+	<script src="https://unpkg.com/topojson-client@3"></script>
+
+	<script src="FICHIERS/RRN/RRN_C.js"></script>
+    <script src="FICHIERS/RRN/RRN_NC.js"></script>
+
+    <script src="FICHIERS/GESIR/GESIR26_RRN_C.js"></script>
+    <script src="FICHIERS/GESIR/GESIR26_RRN_NC.js"></script>
+
+    <style>
+    /* Structure globale fixée et figée aux dimensions exactes de l'écran */
+    html, body {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100vh;
+        width: 100vw;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        overscroll-behavior: none;
+        touch-action: manipulation;
+        display: flex;
+        flex-direction: column;
+        box-sizing: border-box;
+    }
+
+    /* Supprime la barre d'attribution au milieu de la carte */
+    .leaflet-control-attribution {
+        display: none !important;
+    }
+
+    /* Le bandeau supérieur reste fixe et inamovible */
+    .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 2px 8px !important;
+        background-color: #2c3e50;
+        color: white;
+        height: 28px;
+        flex-shrink: 0;
+        z-index: 1002;
+    }
+
+    .header-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .btn-quitter {
+        background-color: #e74c3c;
+        color: white;
+        border: none;
+        border-radius: 3px;
+        padding: 2px 6px;
+        font-size: 11px;
+        font-weight: bold;
+        cursor: pointer;
+    }
+
+    .btn-quitter:hover {
+        background-color: #c0392b;
+    }
+
+    .header-title h2 {
+        margin: 0;
+        font-size: 13px !important;
+        font-weight: bold;
+    }
+
+    .header-help {
+        display: flex;
+        gap: 6px !important;
+        align-items: center;
+        font-size: 11px;
+    }
+
+    .header-help span {
+        font-size: 14px !important;
+        padding: 2px 5px !important;
+        border-radius: 3px;
+    }
+
+    #search-container {
+        position: relative;
+        background: #f8f9fa;
+        padding: 4px 8px;
+        border-bottom: 1px solid #ccc;
+        z-index: 1001;
+        flex-shrink: 0;
+    }
+
+    #search-container-inner {
+        display: flex;
+        gap: 5px;
+        width: 100%;
+    }
+
+    #inputRecherche {
+        flex: 1;
+        height: 30px;
+        box-sizing: border-box;
+        font-size: 13px;
+    }
+
+    #btnAller {
+        height: 30px;
+        padding: 0 12px;
+        background-color: #2980b9;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        font-weight: bold;
+        cursor: pointer;
+    }
+
+    /* Les panneaux repliables ne rétrécissent pas la structure */
+    .collapsible-section {
+        background: white;
+        border-bottom: 1px solid #ddd;
+        position: relative;
+        flex-shrink: 0;
+    }
+
+    .section-header-toggle {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 3px 8px;
+        background: #eaeded;
+        border-bottom: 1px solid #d5dbdb;
+        font-size: 11px;
+        font-weight: bold;
+        color: #2c3e50;
+        cursor: pointer;
+        user-select: none;
+    }
+
+    .toggle-arrow {
+        font-size: 12px;
+        transition: transform 0.2s ease;
+    }
+
+    .collapsible-content {
+        padding: 6px 8px;
+        max-width: 100%;
+        box-sizing: border-box;
+        overflow-x: auto;
+        
+        overflow-y: auto;
+    }
+
+    .collapsed {
+        display: none !important;
+    }
+
+    .pr-selectors-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .pr-block {
+        font-size: 11px;
+        background: #f4f6f7;
+        padding: 4px;
+        border-radius: 4px;
+        border: 1px solid #e5e8e8;
+        flex: 1;
+        min-width: 130px;
+    }
+
+    .pr-block select {
+        font-size: 11px;
+        max-width: 100px;
+    }
+
+    .pr-actions {
+        display: flex;
+        gap: 4px;
+        flex-wrap: wrap;
+        justify-content: center;
+        width: 100%;
+        margin-top: 4px;
+    }
+
+    .pr-actions button {
+        flex: 1;
+        padding: 5px 4px !important;
+        font-size: 11px !important;
+        min-width: 80px;
+    }
+
+    .amenagements-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        font-size: 12px;
+        align-items: center;
+    }
+
+    .amenagement-item {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .leaflet-panel-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: #2c3e50;
+        color: white;
+        padding: 3px 6px;
+        font-size: 11px;
+        font-weight: bold;
+        border-radius: 3px 3px 0 0;
+        cursor: pointer;
+        user-select: none;
+    }
+
+    /* La carte occupe tout l'espace vertical restant sans déborder */
+    #map {
+        flex: 1;
+        width: 100%;
+        min-height: 0;
+    }
+</style>
+</head>
+
+<body>
+
+<!-- Bandeau du haut -->
+<div class="header">
+    <div class="header-title">
+        <button id="btnQuitter" class="btn-quitter" onclick="quitterApp()" title="Quitter l'application">Quitter</button>
+        <h2>Cartographie des PR</h2>
+    </div>
+    
+    <div class="header-help">
+        V1.3
+        <span onclick="ouvrirDonnees()" title="Voir les données" style="cursor: pointer; user-select: none; background: rgba(255,255,255,0.1);">🗂️</span>
+        <span onclick="ouvrirAvertissement()" title="Avertissement" style="cursor: pointer; user-select: none; background: rgba(255,255,255,0.1);">⚠️</span>
+        <span onclick="ouvrirAide()" title="Ouvrir l'aide utilisateur" style="cursor: pointer; user-select: none; background: rgba(255,255,255,0.1);">💡</span>
+    </div>
+</div>
+
+<!-- Barre de recherche seule -->
+<div id="search-container">
+    <div id="search-container-inner">
+        <input type="text" id="inputRecherche" placeholder="Rechercher un lieu, une adresse..." autocomplete="off">
+        <button id="btnAller">Aller</button>
+    </div>
+    <div id="suggestionsRecherche" style="position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ccc; z-index: 1000; display: none; max-height: 200px; overflow-y: auto; color: #333; text-align: left;"></div>
+</div>
+
+
+<!-- Bloc Réseau affiché positionné sous les boutons d'import -->
+            <div class="block" style="text-align: left; background: #f8f9fa; font-size: 13px; padding: 4px 8px;">
+                <b>Réseau affiché : </b><span id="infoLongueurReseau" style="font-weight: bold; color: #2980b9;">0,0 km</span>
+            </div>
+        </div>
+
+<!-- Bandeau Gestionnaires masqué par défaut -->
+<div class="collapsible-section">
+    <div class="section-header-toggle" onclick="toggleSection('content-gvo', 'arrow-gvo')">
+        <span><strong id="titreGestionnaire" style="color: #f8b704;">Gestionnaires</strong></span>
+        <span id="arrow-gvo" class="toggle-arrow" style="transform: rotate(-90deg);">▼</span>
+    </div>
+    <div id="content-gvo" class="collapsible-content collapsed">
+        <div class="block" style="position: relative; display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: bold; color: #2c3e50;">
+            
+            <!-- Conteneur des cases à cocher pour les gestionnaires -->
+            <div id="containerGestionnaires" style="width: 100%; max-height: 120px; overflow-y: auto; border-radius: 4px; border: 1px solid #ccc; background-color: #2ecc71; color: #333; font-size: 11px; padding: 4px; box-sizing: border-box;">
+                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-weight: bold;">
+                    <input type="checkbox" id="chkGestionnaireTous" checked> Tous
+                </label>
+                <div id="subListGestionnaires" style="display: flex; flex-direction: column; gap: 2px; margin-top: 2px;"></div>
+            </div>
+
+        </div>
+        <span id="info"></span>
+    </div>
+</div>
+
+
+<!-- Bandeau PR masqué par défaut -->
+<div class="collapsible-section">
+    <div class="section-header-toggle" onclick="toggleSection('content-pr', 'arrow-pr')">
+        <span><strong style="color: #2980b9;">PR</strong></span>
+        <span id="arrow-pr" class="toggle-arrow" style="transform: rotate(-90deg);">▼</span>
+    </div>
+    <div id="content-pr" class="collapsible-content collapsed">
+        <div class="pr-selectors-container">
+            <div class="pr-block">
+                <b>Départ :</b> 
+                Axe <select id="axeDep"></select>
+                PR <select id="prDep"></select>
+                Abs <select id="absDep"></select>
+            </div>
+
+            <div class="pr-block">
+                <b>Arrivée :</b> 
+                Axe <select id="axeArr"></select>
+                PR <select id="prArr"></select>
+                Abs <select id="absArr"></select>
+            </div>
+        </div>
+
+        <div class="pr-actions">
+            <button id="btnVoirDep" style="background-color: #008CBA; color: white; border: none; border-radius: 4px; font-weight: bold;" title="Visualiser uniquement le point de départ">Voir un point</button>
+            <button id="btnVoirAxe" style="background-color: #34495e; color: white; border: none; border-radius: 4px; font-weight: bold;" title="Visualiser l'axe complet">Voir l'axe</button>
+            <button id="btn" style="background-color: #61c113; color: white; border: none; border-radius: 4px; font-weight: bold;" title="Visualiser l'itinéraire">Itinéraire</button>
+        </div>
+
+        <span id="info"></span>
+    </div>
+</div>
+
+<!-- Bandeau Aménagements masqué par défaut -->
+<div class="collapsible-section">
+    <div class="section-header-toggle" onclick="toggleSection('content-amenagements', 'arrow-amenagements')">
+        <span><strong style="color: #27ae60;">Aménagements</strong></span>
+        <span id="arrow-amenagements" class="toggle-arrow" style="transform: rotate(-90deg);">▼</span>
+    </div>
+    <div id="content-amenagements" class="collapsible-content collapsed">
+        <div class="amenagements-container">
+            <div class="control-group amenagement-item">
+                <input type="checkbox" id="chkAires">
+                <label for="chkAires" style="font-weight: bold; color: #2c3e50;">Aires</label>
+            </div>
+            <div class="control-group amenagement-item">
+                <input type="checkbox" id="chkPeages">
+                <label for="chkPeages" style="font-weight: bold; color: #2c3e50;">Péages</label>
+            </div> 
+            <div class="control-group amenagement-item">
+                <input type="checkbox" id="chkEchangeurs">
+                <label for="chkEchangeurs" style="font-weight: bold; color: #2c3e50;">Échangeurs</label>
+            </div>
+            <div class="control-group amenagement-item">
+                <input type="checkbox" id="chkQualicharge"> 
+                <label for="chkQualicharge" style="font-weight: bold; color: #2c3e50;">Qualicharge</label>
+            </div>
+        </div>
+
+        <div id="options_Aires" style="display: none; flex-direction: row; flex-wrap: wrap; width: fit-content; gap: 15px; margin-top: 5px; font-size: 11px; background: #f8f9fa; padding: 8px; border-radius: 4px; border: 1px solid #e2e8f0;">
+            <div style="display: flex; flex-direction: column; width: fit-content; gap: 3px;">
+                <label style="display: flex; align-items: center; gap: 5px; font-weight: 600;">
+                    <input type="checkbox" id="chkAiresC" checked> Aires RRN C <span id="totAiresC">(0)</span>
+                </label>
+                <div id="options_AiresC_sub" style="display: flex; flex-direction: column; margin-left: 12px; gap: 2px;">
+                    <label style="display: flex; align-items: center; gap: 5px;">
+                        <input type="checkbox" id="chkAiresC_S" checked> Aire de service <span id="totAiresC_S">(0)</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 5px;">
+                        <input type="checkbox" id="chkAiresC_R" checked> Aire de repos <span id="totAiresC_R">(0)</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 5px;">
+                        <input type="checkbox" id="chkAiresC_Autre" checked> Autre aire <span id="totAiresC_A">(0)</span>
+                    </label>
+                </div>
+            </div>
+            <div style="border-left: 1px solid #cbd5e1; margin: 0 2px;"></div>
+            <div style="display: flex; flex-direction: column; width: fit-content; gap: 3px;">
+                <label style="display: flex; align-items: center; gap: 6px; font-weight: 600;">
+                    <input type="checkbox" id="chkAiresNC" checked> Aires RRN NC <span id="totAiresNC">(0)</span>
+                </label>
+                <div id="options_AiresNC_sub" style="display: flex; flex-direction: column; margin-left: 12px; gap: 2px;">
+                    <label style="display: flex; align-items: center; gap: 5px;">
+                        <input type="checkbox" id="chkAiresNC_S" checked> Aire de service <span id="totAiresNC_S">(0)</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 5px;">
+                        <input type="checkbox" id="chkAiresNC_R" checked> Aire de repos <span id="totAiresNC_R">(0)</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 5px;">
+                        <input type="checkbox" id="chkAiresNC_Autre" checked> Autre aire <span id="totAiresNC_A">(0)</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <div id="options_Peages" style="display: none; flex-direction: column; width: fit-content; margin-top: 5px; gap: 3px; font-size: 11px; background: #f8f9fa; padding: 5px; border-radius: 4px; border: 1px solid #e2e8f0;">
+            <label style="display: flex; align-items: center; gap: 5px;">
+                <input type="checkbox" id="chkPeagesBPV" checked> BPV (Pleine voie)
+            </label>
+            <label style="display: flex; align-items: center; gap: 5px;">
+                <input type="checkbox" id="chkPeagesEch" checked> Gare d'échangeur
+            </label>
+        </div>
+
+        <div id="options_Echangeurs" style="display: none; flex-direction: column; width: fit-content; margin-top: 5px; gap: 3px; font-size: 11px; background: #f8f9fa; padding: 5px; border-radius: 4px; border: 1px solid #e2e8f0;">
+            <label style="display: flex; align-items: center; gap: 5px;">
+                <input type="checkbox" id="chkEch_Bifurcation" checked> Bifurcation
+            </label>
+            <label style="display: flex; align-items: center; gap: 5px;">
+                <input type="checkbox" id="chkEch_Diffuseur" checked> Diffuseur
+            </label>
+            <label style="display: flex; align-items: center; gap: 5px;">
+                <input type="checkbox" id="chkEch_Mixte" checked> Mixte
+            </label>
+        </div>
+
+        <div id="statutQualicharge" style="font-size: 11px; margin-top: 2px; font-weight: bold; display: none;"></div>
+        
+        <div id="options_Qualicharge" style="margin-top: 4px; display: none; flex-direction: column; gap: 4px;">
+            <label id="wrapper_Qualicharge_VL" style="font-size: 11px; cursor: pointer; display: inline-block;">
+                <input type="checkbox" id="chkQualicharge_VL" checked> <span id="label_Qualicharge_VL">Stations VL</span>
+            </label>
+            <label id="wrapper_Qualicharge_PL" style="font-size: 11px; cursor: pointer; display: inline-block;">
+                <input type="checkbox" id="chkQualicharge_PL" checked> <span id="label_Qualicharge_PL">Stations PL</span>
+            </label>
+
+            <label id="wrapper_Aires_C" style="font-size: 11px; cursor: pointer; display: none;">
+                <input type="checkbox" id="chkAfficher_Aires_C" checked> <span>Stations Aires C <span id="txt_nb_aires_c">(0)</span></span>
+            </label>
+            <label id="wrapper_Aires_NC" style="font-size: 11px; cursor: pointer; display: none;">
+                <input type="checkbox" id="chkAfficher_Aires_NC" checked> <span>Stations Aires NC <span id="txt_nb_aires_nc">(0)</span></span>
+            </label>
+
+            <div style="display: flex; flex-direction: row; flex-wrap: wrap; gap: 6px; margin-top: 6px; align-items: center;">
+                <button id="btnExportQualicharge" style="padding: 3px 8px; font-size: 11px; font-weight: bold; background-color: #27ae60; color: white; border: none; border-radius: 3px; cursor: pointer;">Export Excel</button>
+                <button id="btnStatsAires" style="padding: 3px 8px; font-size: 11px; font-weight: bold; background-color: #2980b9; color: white; border: none; border-radius: 3px; cursor: pointer;">Aires</button>
+                <label style="font-size: 11px; cursor: pointer; user-select: none; display: inline-flex; align-items: center; gap: 2px; margin-right: 5px;">
+                    <input type="checkbox" id="chkFiltrerStationsAires"> Afficher sur aires
+                </label>
+                <button id="btnCarrefours" style="padding: 3px 8px; font-size: 11px; font-weight: bold; background-color: #8e44ad; color: white; border: none; border-radius: 3px; cursor: pointer;">Carrefours</button>
+                <label style="font-size: 11px; cursor: pointer; user-select: none; display: inline-flex; align-items: center; gap: 2px;">
+                    <input type="checkbox" id="chkFiltrerCarrefours"> Afficher proches
+                </label>
+            </div>
+
+            <div id="options_Carrefours" style="display: none; margin-top: 4px; font-size: 11px;">
+                <span id="statutCarrefours" style="font-weight: bold; color: #2c3e50;"></span>
+            </div>
+        </div>
+
+        <div id="ChargeQualicharge2" style="font-size: 11px; margin-top: 2px; font-weight: bold; display:none">
+            <b style="font-size: 12px; margin-bottom: 2px; text-align: center;">Chargement en cours</b>
+        </div>
+    </div>
+</div>
+
+<!-- Section Légende masquée par défaut -->
+<div class="collapsible-section">
+    <div class="section-header-toggle" onclick="toggleSection('content-legende-block', 'arrow-legende')">
+        <span><strong style="color: #2c3e50;">Légende</strong></span>
+        <span id="arrow-legende" class="toggle-arrow" style="transform: rotate(-90deg);">▼</span>
+    </div>
+    <div id="content-legende-block" class="collapsible-content collapsed">
+        <div id="legende" class="block" style="display: flex; flex-direction: column; gap: 6px; padding: 4px 8px; background-color: #fafafa; border-radius: 4px;">
+            <div id="legende_AiresRepos" class="legende-item" style="display: none;">
+                <img src="FICHIERS/Aire_Repos.jpg" alt="" style="height: 24px;">
+                <span>Aire de repos</span>
+            </div>
+            <div id="legende_AiresService" class="legende-item" style="display: none;">
+                <img src="FICHIERS/Aire_Service.jpg" alt="" style="height: 24px;">
+                <span>Aire de service</span>
+            </div>
+            <div id="legende_AiresAutres" class="legende-item" style="display: none;">
+                <img src="FICHIERS/Parking.png" alt="" style="height: 24px;">
+                <span>Autre aire</span>
+            </div>
+            <div id="legende_BPV" class="legende-item" style="display: none;">
+                <img src="FICHIERS/peage_BPV.png" alt="" style="height: 24px;">
+                <span>BPV</span>
+            </div>
+            <div id="legende_Echangeur" class="legende-item" style="display: none;">
+                <img src="FICHIERS/peage_echangeur.png" alt="" style="height: 24px;">
+                <span>Gare d'échangeur</span>
+            </div>
+            <div id="legende_Qualicharge_VL" class="legende-item" style="display: none;">
+                <span style="display: inline-block; width: 12px; height: 12px; background-color: #0078ff; border-radius: 50%; border: 1.5px solid #fff;"></span>
+                <span>Station Qualicharge VL</span>
+            </div>
+            <div id="legende_Qualicharge_PL" class="legende-item" style="display: none;">
+                <span style="display: inline-block; width: 12px; height: 12px; background-color: #e74c3c; border-radius: 50%; border: 1.5px solid #fff;"></span>
+                <span>Station Qualicharge PL</span>
+            </div>
+            <div id="legende_Qualicharge_AireC" class="legende-item" style="display: none;">
+                <span style="display: inline-block; width: 12px; height: 12px; background-color: #3498db; border-radius: 50%; border: 1.5px solid #fff;"></span>
+                <span>Station sur Aire C</span>
+            </div>
+            <div id="legende_Qualicharge_AireNC" class="legende-item" style="display: none;">
+                <span style="display: inline-block; width: 12px; height: 12px; background-color: #2ecc71; border-radius: 50%; border: 1.5px solid #fff;"></span>
+                <span>Station sur Aire NC</span>
+            </div>
+            <div id="legende_Qualicharge_Carrefour" class="legende-item" style="display: none;">
+                <span style="display: inline-block; width: 12px; height: 12px; background-color: #8e44ad; border-radius: 50%; border: 1.5px solid #fff;"></span>
+                <span>Station proche carrefour</span>
+            </div>
+            <div id="legende_Ech_Bifurcation" class="legende-item" style="display: none;">
+                <img src="FICHIERS/bifurcation.png" alt="" style="height: 24px;">
+                <span>Bifurcation</span>
+            </div>
+            <div id="legende_Ech_Diffuseur" class="legende-item" style="display: none;">
+                <img src="FICHIERS/diffuseur.png" alt="" style="height: 24px;">
+                <span>Diffuseur</span>
+            </div>
+            <div id="legende_Ech_Mixte" class="legende-item" style="display: none;">
+                <img src="FICHIERS/mixte.png" alt="" style="height: 24px;">
+                <span>Échangeur Mixte</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Section Rapports masquée par défaut -->
+<div class="collapsible-section">
+    <div class="section-header-toggle" onclick="toggleSection('content-rapports', 'arrow-rapports')">
+        <span><strong style="color: #96561a;">Rapports</strong></span>
+        <span id="arrow-rapports" class="toggle-arrow" style="transform: rotate(-90deg);">▼</span>
+    </div>
+    <div id="content-rapports" class="collapsible-content collapsed">
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+            <select id="selectRapports" style="font-size: 11px; padding: 4px; width: 100%;">
+                <option value="">-- Sélectionnez un rapport --</option>
+            </select>
+            <div style="display: flex; gap: 6px;">
+                <button id="btnOuvrirRapport" style="flex: 1; padding: 4px; font-size: 11px; background-color: #2980b9; color: white; border: none; border-radius: 3px; font-weight: bold; cursor: pointer;">Ouvrir</button>
+                <button id="btnResumeRapport" style="flex: 1; padding: 4px; font-size: 11px; background-color: #8e44ad; color: white; border: none; border-radius: 3px; font-weight: bold; cursor: pointer;" onclick="ouvrirResumeRapport(document.getElementById('selectRapports').value)">Résumé</button>
+                <button id="btnPartagerRapport" style="flex: 1; padding: 4px; font-size: 11px; background-color: #27ae60; color: white; border: none; border-radius: 3px; font-weight: bold; cursor: pointer;">Partager</button>
+                <input type="file" id="inputImportFichiers" accept=".html,text/html" multiple style="display: none;" onchange="importerFichiersHTML(event)">
+                <button id="btnImporter" style="flex: 1; padding: 4px; font-size: 11px; background-color: #f0e330; color: white; border: none; border-radius: 3px; font-weight: bold; cursor: pointer;" onclick="document.getElementById('inputImportFichiers').click();">Importer</button>
+
+             
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Carte Leaflet occupant l'espace restant de manière flexible -->
+<div id="map"></div>
+
+<!-- Conteneur de lecture des rapports (masqué par défaut, display: none) -->
+<div id="lecteurRapportContainer" style="display: none; position: fixed; bottom: 0; left: 0; width: 100vw; height: 80vh; background: white; z-index: 99999; box-shadow: 0 -2px 10px rgba(0,0,0,0.3); border-top-left-radius: 12px; border-top-right-radius: 12px; flex-direction: column;">
+    <div id="rapportHeader" style="padding: 10px 15px; background: #f1f1f1; border-top-left-radius: 12px; border-top-right-radius: 12px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; border-bottom: 1px solid #ddd; flex-shrink: 0;">
+        <span style="font-weight: bold; font-size: 14px;">📄 Rapport de Cartographie</span>
+        <div>
+            <button id="btnReduireRapport" style="background: none; border: none; font-size: 16px; cursor: pointer; margin-right: 10px;" title="Réduire / Agrandir">▼</button>
+            <button id="btnFermerRapport" style="background: #e74c3c; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-weight: bold;">Fermer</button>
+        </div>
+    </div>
+    <div id="contenuRapportHtml" style="flex: 1; overflow-y: auto; padding: 15px; box-sizing: border-box;"></div>
+</div>
+
+<div id="conteneurCadastreTemporaire" style="display: none;">
+    <label id="labelCadastre" style="cursor: pointer; font-size: 12px; display: block; margin-top: 5px; padding-top: 5px; border-top: 1px solid #ddd;">
+        <input type="checkbox" id="chkCadastre"> Afficher Cadastre
+    </label>
+</div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="FICHIERS/app.js" charset="utf-8"></script>
+
+<script>
+    async function quitterApp() {
+        if (confirm("Voulez-vous vraiment quitter l'application ?")) {
+            if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+                const App = window.Capacitor.Plugins.App;
+                if (App && App.exitApp) {
+                    await App.exitApp();
+                }
+            } else {
+                window.close();
+            }
+        }
+    }
+
+    function toggleSection(contentId, arrowId) {
+        const content = document.getElementById(contentId);
+        const arrow = document.getElementById(arrowId);
+        if (content && arrow) {
+            content.classList.toggle('collapsed');
+            if (content.classList.contains('collapsed')) {
+                arrow.style.transform = 'rotate(-90deg)';
+            } else {
+                arrow.style.transform = 'rotate(0deg)';
+            }
+        }
+        if (typeof map !== 'undefined' && map) {
+            setTimeout(function() { map.invalidateSize(); }, 200);
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+        setTimeout(function() {
+            const conteneurLayers = document.querySelector('.leaflet-control-layers');
+            const elementCadastre = document.getElementById('labelCadastre');
+            
+            if (conteneurLayers && !conteneurLayers.querySelector('.leaflet-panel-header')) {
+                const innerList = conteneurLayers.querySelector('.leaflet-control-layers-list');
+                if (elementCadastre && innerList) {
+                    innerList.appendChild(elementCadastre);
+                }
+
+                const panelHeader = document.createElement('div');
+                panelHeader.className = 'leaflet-panel-header';
+                panelHeader.onclick = function() { toggleSection('layers-content', 'arrow-layers'); };
+                panelHeader.innerHTML = `<span>Couches</span><span id="arrow-layers" class="toggle-arrow" style="transform: rotate(-90deg);">▼</span>`;
+
+                const layersContent = document.createElement('div');
+                layersContent.className = 'collapsible-content collapsed';
+                layersContent.id = 'layers-content';
+                layersContent.style.padding = '6px';
+
+                while (conteneurLayers.firstChild) {
+                    layersContent.appendChild(conteneurLayers.firstChild);
+                }
+
+                conteneurLayers.appendChild(panelHeader);
+                conteneurLayers.appendChild(layersContent);
+
+                const containerBottomRight = document.querySelector('.leaflet-bottom.leaflet-right');
+                if (containerBottomRight) {
+                    containerBottomRight.appendChild(conteneurLayers);
+                }
+            }
+
+            const zoomControl = document.querySelector('.leaflet-control-zoom');
+            const geolocControl = document.querySelector('.leaflet-control-locate') || document.querySelector('.leaflet-control-easyButton');
+            const containerBottomRight = document.querySelector('.leaflet-bottom.leaflet-right');
+
+            if (containerBottomRight && conteneurLayers) {
+                if (zoomControl) containerBottomRight.insertBefore(zoomControl, conteneurLayers);
+                if (geolocControl) containerBottomRight.insertBefore(geolocControl, conteneurLayers);
+            }
+
+            const resetBtn = document.getElementById('btnReset') || document.querySelector('.leaflet-control-custom');
+            let panneauAffichage = null;
+            if (resetBtn) {
+                panneauAffichage = resetBtn.closest('.leaflet-control') || resetBtn.parentElement;
+            }
+
+            if (panneauAffichage && !panneauAffichage.querySelector('.leaflet-panel-header')) {
+                const headerAffichage = document.createElement('div');
+                headerAffichage.className = 'leaflet-panel-header';
+                headerAffichage.onclick = function() { toggleSection('affichage-content', 'arrow-affichage'); };
+                headerAffichage.innerHTML = `<span>Affichage</span><span id="arrow-affichage" class="toggle-arrow" style="transform: rotate(-90deg);">▼</span>`;
+
+                const affichageContent = document.createElement('div');
+                affichageContent.className = 'collapsible-content collapsed';
+                affichageContent.id = 'affichage-content';
+                affichageContent.style.padding = '4px';
+                affichageContent.style.background = 'white';
+
+                while (panneauAffichage.firstChild) {
+                    affichageContent.appendChild(panneauAffichage.firstChild);
+                }
+
+                panneauAffichage.appendChild(headerAffichage);
+                panneauAffichage.appendChild(affichageContent);
+
+                const containerBottomLeft = document.querySelector('.leaflet-bottom.leaflet-left');
+                if (containerBottomLeft) {
+                    containerBottomLeft.appendChild(panneauAffichage);
+                }
+            }
+
+
+        }, 300);
+    });
+</script>
+
+</body>
+</html>
