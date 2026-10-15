@@ -1682,59 +1682,72 @@ btnMic.onclick = async function(e) {
 `;
 
         } else {
-            // 2. Arrêt et enregistrement du fichier
-            isRecording = false;
-            div.style.backgroundColor = 'white';
-            let imgPath = "FICHIERS/Suivi.png";
-            if (window.Capacitor && window.Capacitor.isNativePlatform()) {
-                imgPath = "./FICHIERS/Suivi.png"; 
+    // 2. Arrêt et enregistrement du fichier en mode Web/PWA
+    isRecording = false;
+    div.style.backgroundColor = 'white';
+    let imgPath = "FICHIERS/Suivi.png";
+    if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+        imgPath = "./FICHIERS/Suivi.png"; 
+    }
+
+    div.innerHTML = `<img src="${imgPath}" alt="Suivi" style="width: 28px; height: 28px; vertical-align: middle;" />`;
+    div.title = "Démarrer l'enregistrement";
+
+    extraButtonsDiv.style.display = 'none';
+
+    try {
+        currentFileContent += `</body></html>`;
+        
+        if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+            const fs = window.Capacitor.Plugins.Filesystem;
+            if (!fs) throw new Error("Filesystem plugin non disponible");
+
+            let targetDir = 'DOCUMENTS';
+            if (fs.Directory) {
+                targetDir = fs.Directory.Documents || fs.Directory.ExternalStorage || 'DOCUMENTS';
             }
 
-            div.innerHTML = `<img src="${imgPath}" alt="Suivi" style="width: 28px; height: 28px; vertical-align: middle;" />`;
-            div.title = "Démarrer l'enregistrement";
+            await fs.mkdir({
+                path: 'Carto_PR',
+                directory: targetDir,
+                recursive: true
+            }).catch(() => {});
 
-            // Masquer les boutons supplémentaires
-            extraButtonsDiv.style.display = 'none';
+            await fs.writeFile({
+                path: `Carto_PR/${currentFileName}`,
+                data: currentFileContent,
+                directory: targetDir,
+                encoding: 'utf8'
+            });
 
-           try {
-                currentFileContent += `</body></html>`;
-                
-                if (window.Capacitor && window.Capacitor.isNativePlatform()) {
-                    const fs = window.Capacitor.Plugins.Filesystem;
-                    if (!fs) throw new Error("Filesystem plugin non disponible");
-
-                    // Remplacement sécurisé pour éviter l'erreur "cannot read properties of undefined (reading 'documents')"
-                    let targetDir = 'DOCUMENTS';
-                    if (fs.Directory) {
-                        targetDir = fs.Directory.Documents || fs.Directory.ExternalStorage || 'DOCUMENTS';
-                    }
-
-                    await fs.mkdir({
-                        path: 'Carto_PR',
-                        directory: targetDir,
-                        recursive: true
-                    }).catch(() => {});
-
-                    await fs.writeFile({
-                        path: `Carto_PR/${currentFileName}`,
-                        data: currentFileContent,
-                        directory: targetDir,
-                        encoding: 'utf8'
-                    });
-
-                    if (typeof chargerListeRapports === 'function') {
-                        await chargerListeRapports();
-                    }
-                    alert(`Rapport enregistré !`);
-                } else {
-                    localStorage.setItem(currentFileName, currentFileContent);
-                    alert("Fichier enregistré en mode Web.");
-                }
-            } catch (erreur) {
-                console.error("Erreur Filesystem :", erreur);
-                alert("Erreur lors de l'enregistrement : " + (erreur.message || JSON.stringify(erreur)));
+            if (typeof chargerListeRapports === 'function') {
+                await chargerListeRapports();
             }
+            alert(`Rapport enregistré !`);
+        } else {
+            // Mode Web / PWA (Safari / iPhone) : Stockage local + Téléchargement direct du fichier
+            localStorage.setItem(currentFileName, currentFileContent);
+
+            const blob = new Blob([currentFileContent], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = currentFileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            if (typeof chargerListeRapports === 'function') {
+                await chargerListeRapports();
+            }
+            alert("Rapport téléchargé et enregistré en mode Web !");
         }
+    } catch (erreur) {
+        console.error("Erreur d'enregistrement :", erreur);
+        alert("Erreur lors de l'enregistrement : " + (erreur.message || JSON.stringify(erreur)));
+    }
+}
     };
 
     return containerDiv;
